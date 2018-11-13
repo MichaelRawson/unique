@@ -1,0 +1,11 @@
+[package]
+name = "unique"
+version = "0.1.0"
+authors = ["Michael Rawson <michael@rawsons.uk>"]
+edition = "2018"
+
+[dependencies]
+chashmap = "2.2"
+
+[dev-dependencies]
+lazy_static = "1.1"
