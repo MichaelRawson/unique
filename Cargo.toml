@@ -1,8 +1,11 @@
 [package]
 name = "unique"
+description = "Intern arbitrary data structures"
 version = "0.1.0"
 authors = ["Michael Rawson <michael@rawsons.uk>"]
+license = "MIT"
 edition = "2018"
+keywords = ["intern", "leak", "allocation", "tree", "graph"]
 
 [dependencies]
 chashmap = "2.2"
