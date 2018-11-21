@@ -9,6 +9,8 @@
 //! # Example
 //! ```rust
 //! #[macro_use] extern crate lazy_static;
+//! #[macro_use] extern crate unique;
+//!
 //! use unique::{Backed, Uniq};
 //! use unique::backing::HashBacking;
 //!
@@ -29,8 +31,8 @@
 //! }
 //!
 //! fn example() {
-//!     let two_x = Uniq::new(Expr::Const(2));
-//!     let two_y = Uniq::new(Expr::Const(2));
+//!     let two_x = uniq!(Expr::Const(2));
+//!     let two_y = uniq!(Expr::Const(2));
 //!     assert!(two_x.as_ref() as *const Expr == two_y.as_ref() as *const Expr);
 //! }
 //! ```
@@ -154,4 +156,10 @@ impl<T> fmt::Pointer for Uniq<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:p}", self.0)
     }
+}
+
+/// Shorthand for `Uniq::new`.
+#[macro_export]
+macro_rules! uniq {
+    ($e:expr) => {Uniq::new($e)}
 }
