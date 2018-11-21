@@ -1,14 +1,13 @@
 [package]
 name = "unique"
 description = "Intern arbitrary data structures"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Michael Rawson <michael@rawsons.uk>"]
 license = "MIT"
+homepage = "https://github.com/MichaelRawson/unique"
 edition = "2018"
 keywords = ["intern", "leak", "allocation", "tree", "graph"]
 
 [dependencies]
 chashmap = "2.2"
-
-[dev-dependencies]
 lazy_static = "1.1"

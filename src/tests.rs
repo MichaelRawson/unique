@@ -24,8 +24,8 @@ lazy_static! {
 }
 
 impl Backed for Expr {
-    fn unique(self) -> Uniq<Self> {
-        EXPR_BACKING.unique(self)
+    fn unique(value: Self) -> Uniq<Self> {
+        EXPR_BACKING.unique(value)
     }
 }
 
