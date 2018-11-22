@@ -46,4 +46,9 @@ fn example() {
     assert!(format!("{}", four) == "(2 + 2)");
 
     assert!(EXPR_BACKING.num_entries() == 3);
+
+    let two_z = Uniq::reuse(two_x, Const(2));
+    let three = Uniq::reuse(two_x, Const(3));
+    assert!(two_x.as_ref() as *const Expr == two_z.as_ref() as *const Expr);
+    assert!(two_x != three);
 }

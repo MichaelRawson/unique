@@ -30,6 +30,7 @@
 //!     }
 //! }
 //!
+//! #[test]
 //! fn example() {
 //!     let two_x = uniq!(Expr::Const(2));
 //!     let two_y = uniq!(Expr::Const(2));
@@ -40,7 +41,7 @@
 extern crate chashmap;
 #[macro_use]
 extern crate lazy_static;
-lazy_static! {}
+lazy_static!{}
 
 use std::borrow::Borrow;
 use std::cmp::Ordering;
@@ -77,6 +78,19 @@ impl<T: Backed> Uniq<T> {
     /// This may be newly-allocated or recycled.
     pub fn new(data: T) -> Uniq<T> {
         T::unique(data)
+    }
+}
+
+impl<T: Backed + Eq> Uniq<T> {
+    /// Attempt to re-use this pointer for `data` if is value-equal, or allocate if not.
+    ///
+    /// Useful over `Uniq::new` as a performance optimisation.
+    pub fn reuse(p: Uniq<T>, data: T) -> Uniq<T> {
+        if *p == data {
+            p
+        } else {
+            Uniq::new(data)
+        }
     }
 }
 
@@ -161,5 +175,7 @@ impl<T> fmt::Pointer for Uniq<T> {
 /// Shorthand for `Uniq::new`.
 #[macro_export]
 macro_rules! uniq {
-    ($e:expr) => {Uniq::new($e)}
+    ($e:expr) => {
+        Uniq::new($e)
+    };
 }
