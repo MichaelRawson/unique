@@ -3,7 +3,7 @@ use crate::*;
 use chashmap::CHashMap;
 
 struct HashBackingRecord<T> {
-    unique: Uniq<T>,
+    id: Id<T>,
 }
 
 /// A backing store based on a concurrent hashmap.
@@ -34,18 +34,18 @@ unsafe fn force_static<T>(reference: &T) -> &'static T {
 
 impl<T: Eq + Hash> HashBacking<T> {
     /// Allows implementing `Backed` for any type that implements `Eq + Hash`.
-    pub fn unique(&self, val: T) -> Uniq<T> {
+    pub fn unique(&self, val: T) -> Id<T> {
         // lifetimes on CHashMap are too restrictive
         let val_ref = &val;
         let static_val = unsafe { force_static(val_ref) };
 
         if let Some(record) = self.backing.get(&static_val) {
-            return record.unique;
+            return record.id;
         } else {
             let boxed = Box::new(val);
             let box_ref = unsafe { force_static(boxed.as_ref()) };
-            let unique = Uniq(box_ref as *const T);
-            let record = HashBackingRecord { unique };
+            let id = Id(box_ref as *const T);
+            let record = HashBackingRecord { id };
 
             self.backing.upsert(
                 box_ref,
@@ -56,7 +56,8 @@ impl<T: Eq + Hash> HashBacking<T> {
                 |_| {},
             );
 
-            self.backing.get(&box_ref).unwrap().unique
+            //self.backing.get(&box_ref).unwrap().id
+            id
         }
     }
 }
