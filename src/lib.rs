@@ -59,11 +59,18 @@ pub trait Backed {
 ///
 /// By "unique" I mean that if `t1 == t2` (as determined by the backing store), then
 /// `Id::new(t1)` is pointer-equal to `Id::new(t2)`.
-/// This property reduces memory use, reduces allocator hits, and allows for short-circuiting many operations, including `Ord` (pointer ordering), `Eq` (pointer equality), and `Hash` (pointer hash).
+/// This property reduces memory use, reduces allocator hits, and allows for short-circuiting operations such as `Eq` (pointer equality instead of object equality), and `Hash` (pointer hash instead of object hash).
 pub struct Id<T: ?Sized>(*const T);
 
 unsafe impl<T> Send for Id<T> {}
 unsafe impl<T> Sync for Id<T> {}
+
+impl<T> Id<T> {
+    /// Produce an integral ID from an `Id`.
+    pub fn id(p: Self) -> usize {
+        p.0 as usize
+    }
+}
 
 impl<T: Backed> Id<T> {
     /// Ask the backing store for a uniq'd pointer to `data`.
@@ -78,7 +85,7 @@ impl<T: Backed + Eq> Id<T> {
     /// Attempt to re-use this pointer for `data` if is value-equal, or allocate if not.
     ///
     /// Useful over `Id::new` as a performance optimisation.
-    pub fn reuse(p: Id<T>, data: T) -> Id<T> {
+    pub fn reuse(p: Self, data: T) -> Self {
         if *p == data {
             p
         } else {
@@ -109,15 +116,15 @@ impl<T> PartialEq for Id<T> {
 
 impl<T> Eq for Id<T> {}
 
-impl<T> PartialOrd for Id<T> {
+impl<T: PartialOrd> PartialOrd for Id<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
+        (**self).partial_cmp(&**other)
     }
 }
 
-impl<T> Ord for Id<T> {
+impl<T: Ord> Ord for Id<T> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
+        (**self).cmp(&**other)
     }
 }
 
