@@ -1,14 +1,39 @@
-use crate::*;
-
 use chashmap::CHashMap;
+use std::hash::{Hash, Hasher};
+use std::mem::drop;
+use std::ptr::NonNull;
 
-struct HashBackingRecord<T> {
-    id: Id<T>,
+use crate::Id;
+
+struct Key<T>(*const T);
+
+impl<T> Clone for Key<T> {
+    fn clone(&self) -> Self {
+        Key(self.0)
+    }
+}
+
+impl<T> Copy for Key<T> {}
+unsafe impl<T> Sync for Key<T> {}
+unsafe impl<T> Send for Key<T> {}
+
+impl<T: PartialEq> PartialEq for Key<T> {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { (*self.0).eq(&*other.0) }
+    }
+}
+
+impl<T: Hash> Hash for Key<T> {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        unsafe {
+            (*self.0).hash(hasher);
+        }
+    }
 }
 
 /// A backing store based on a concurrent hashmap.
-pub struct HashBacking<T: 'static> {
-    backing: CHashMap<&'static T, HashBackingRecord<T>>,
+pub struct HashBacking<T> {
+    backing: CHashMap<Key<T>, Id<T>>,
 }
 
 impl<T> HashBacking<T> {
@@ -18,7 +43,7 @@ impl<T> HashBacking<T> {
     }
 }
 
-impl<T: Eq + Hash> HashBacking<T> {
+impl<T> HashBacking<T> {
     /// Create a new backing store, pre-allocating `capacity` items.
     pub fn new(capacity: usize) -> Self {
         HashBacking {
@@ -27,37 +52,34 @@ impl<T: Eq + Hash> HashBacking<T> {
     }
 }
 
-unsafe fn force_static<T>(reference: &T) -> &'static T {
-    let ptr = reference as *const T;
-    &*ptr
-}
-
-impl<T: Eq + Hash> HashBacking<T> {
+impl<T: PartialEq + Hash> HashBacking<T> {
     /// Allows implementing `Backed` for any type that implements `Eq + Hash`.
     pub fn unique(&self, val: T) -> Id<T> {
-        // lifetimes on CHashMap are too restrictive
-        let val_ref = &val;
-        let static_val = unsafe { force_static(val_ref) };
-
-        if let Some(record) = self.backing.get(&static_val) {
-            return record.id;
-        } else {
-            let boxed = Box::new(val);
-            let box_ref = unsafe { force_static(boxed.as_ref()) };
-            let id = Id(box_ref as *const T);
-            let record = HashBackingRecord { id };
-
-            self.backing.upsert(
-                box_ref,
-                || {
-                    let _ = Box::leak(boxed);
-                    record
-                },
-                |_| {},
-            );
-
-            //self.backing.get(&box_ref).unwrap().id
-            id
+        let key = Key(&val);
+        if let Some(id) = self.backing.get(&key) {
+            return *id;
         }
+
+        let boxed = Box::new(val);
+        let pointer = Box::into_raw(boxed);
+        let key = Key(pointer);
+        let id = Id(unsafe { NonNull::new_unchecked(pointer) });
+        let mut insert_failed = false;
+
+        self.backing.upsert(
+            key,
+            || id,
+            |_| {
+                insert_failed = true;
+            },
+        );
+
+        let result = *self.backing.get(&key).unwrap();
+        if insert_failed {
+            let reboxed = unsafe { Box::from_raw(pointer) };
+            drop(reboxed);
+        }
+
+        result
     }
 }

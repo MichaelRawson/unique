@@ -41,6 +41,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::ptr::NonNull;
 
 /// Data structures for implementing backing stores.
 pub mod backing;
@@ -60,7 +61,7 @@ pub trait Backed {
 /// By "unique" I mean that if `t1 == t2` (as determined by the backing store), then
 /// `Id::new(t1)` is pointer-equal to `Id::new(t2)`.
 /// This property reduces memory use, reduces allocator hits, and allows for short-circuiting operations such as `Eq` (pointer equality instead of object equality), and `Hash` (pointer hash instead of object hash).
-pub struct Id<T: ?Sized>(*const T);
+pub struct Id<T: ?Sized>(NonNull<T>);
 
 unsafe impl<T> Send for Id<T> {}
 unsafe impl<T> Sync for Id<T> {}
@@ -68,7 +69,7 @@ unsafe impl<T> Sync for Id<T> {}
 impl<T> Id<T> {
     /// Produce an integral ID from an `Id`.
     pub fn id(p: Self) -> usize {
-        p.0 as usize
+        p.0.as_ptr() as usize
     }
 }
 
@@ -138,7 +139,7 @@ impl<T> Deref for Id<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*self.0 }
+        unsafe { self.0.as_ref() }
     }
 }
 
