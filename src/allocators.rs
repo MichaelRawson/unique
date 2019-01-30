@@ -12,9 +12,7 @@ pub struct HashAllocator<T> {
 impl<T> Default for HashAllocator<T> {
     fn default() -> Self {
         let backing = CHashMap::new();
-        Self {
-            backing
-        }
+        Self { backing }
     }
 }
 
@@ -29,7 +27,7 @@ impl<T: Eq + Hash> Allocator<T> for HashAllocator<T> {
             || value,
             |other| {
                 result = Weak::upgrade(other).unwrap();
-            }
+            },
         );
         Id(result)
     }
@@ -40,9 +38,8 @@ impl<T: Eq + Hash> Allocator<T> for HashAllocator<T> {
 
     fn delete_unused(&self) {
         // OK since each bucket is locked first
-        self.backing.retain(|key, _value| {
-            Arc::strong_count(key) > 1
-        });
+        self.backing
+            .retain(|key, _value| Arc::strong_count(key) > 1);
         self.backing.shrink_to_fit();
     }
 }

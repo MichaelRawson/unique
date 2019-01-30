@@ -32,7 +32,7 @@
 
 use std::borrow::Borrow;
 use std::fmt;
-use std::hash::{Hasher, Hash};
+use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -65,7 +65,7 @@ pub trait Allocated: Eq + Sized + 'static {
 
 /// A unique, shared pointer
 ///
-#[derive(Clone, Debug, Default, PartialOrd, Ord)]
+#[derive(Debug, Default, PartialOrd, Ord)]
 pub struct Id<T>(Arc<T>);
 
 impl<T> Id<T> {
@@ -79,6 +79,12 @@ impl<T: Allocated> Id<T> {
     /// Get a shared pointer to (something value-equal to) `t`
     pub fn new(t: T) -> Self {
         T::allocator().allocate(t)
+    }
+}
+
+impl<T> Clone for Id<T> {
+    fn clone(&self) -> Self {
+        Id(Arc::clone(&self.0))
     }
 }
 
@@ -141,5 +147,5 @@ macro_rules! make_allocator {
                 &$name
             }
         }
-    }
+    };
 }

@@ -2,8 +2,8 @@ use lazy_static::lazy_static;
 use std::fmt;
 use std::mem::drop;
 
-use crate::{Allocator, Allocated, Id, make_allocator};
 use crate::allocators::HashAllocator;
+use crate::{make_allocator, Allocated, Allocator, Id};
 
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug)]
 enum Expr {
