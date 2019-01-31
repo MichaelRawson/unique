@@ -65,7 +65,7 @@ pub trait Allocated: Eq + Sized + 'static {
 
 /// A unique, shared pointer
 ///
-#[derive(Debug, Default, PartialOrd, Ord)]
+#[derive(Default, PartialOrd, Ord)]
 pub struct Id<T>(Arc<T>);
 
 impl<T> Id<T> {
@@ -107,6 +107,12 @@ impl<T> Deref for Id<T> {
 
     fn deref(&self) -> &Self::Target {
         self.0.deref()
+    }
+}
+
+impl<T: fmt::Debug> fmt::Debug for Id<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
