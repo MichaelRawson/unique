@@ -1,12 +1,14 @@
 //! Allocators which create one unique, shared pointer per distinct object.
-//! Useful for applications with highly-redundant or deeply nested data structures such as compilers, or automatic theorem provers.
+//! Useful for applications with highly-redundant data structures such as compilers or automatic theorem provers.
 //!
 //! If `t1 == t2` (as determined by the allocator), then `Id::new(t1)` is pointer-equal to `Id::new(t2)`.
 //! This property reduces memory use, reduces allocator hits, and allows for short-circuiting operations such as `Eq` and `Hash` by using the pointer rather than the data.
 //!
+//! Occasionally you may wish to "garbage collect" unused objects.
+//! This can be achieved with `Allocator::delete_unused`.
+//!
 //! # Example
 //! ```rust
-//! use lazy_static::lazy_static;
 //! use unique::{Allocated, Id, make_allocator};
 //! use unique::allocators::HashAllocator;
 //!
@@ -15,18 +17,33 @@
 //!     Const(i32),
 //!     Add(Id<Expr>, Id<Expr>),
 //! }
-//!
-//! make_allocator!(Expr, __EXPR_ALLOC, HashAllocator);
+//! make_allocator!(Expr, EXPR_ALLOC, HashAllocator);
 //!
 //! #[test]
 //! fn example() {
-//!     let two_x = Id::new(Expr::Const(2));
-//!     let two_y = Id::new(Expr::Const(2));
-//!     let three = Id::new(Expr::Const(3));
+//!     use Expr::*;
 //!
-//!     assert_eq!(two_x, two_y);
-//!     assert_ne!(two_x, three);
-//!     assert_eq!(Expr::allocator().allocations(), 2);
+//!     // Equivalent ways of allocating a `2` object.
+//!     let two_x = Expr::allocator().allocate(Const(2));
+//!     let two_y = EXPR_ALLOC.allocate(Const(2));
+//!     let two_z = Id::new(Const(2));
+//!     assert_eq!(*two_x, *two_y, *two_z, Const(2));
+//!     assert_eq!(two_x, two_y, two_z);
+//!
+//!     // A distinct object, 2 + 2.
+//!     let four = Id::new(Add(two_x.clone(), two_y.clone()));
+//!     assert_ne!(two_x, four);
+//!
+//!     // Note only two allocations.
+//!     assert_eq!(EXPR_ALLOC.allocations(), 2);
+//!
+//!     std::mem::drop(four);
+//!
+//!     // Still two allocations.
+//!     assert_eq!(EXPR_ALLOC.allocations(), 2);
+//!     EXPR_ALLOC.delete_unused();
+//!     // Now four is no more.
+//!     assert_eq!(EXPR_ALLOC.allocations(), 1);
 //! }
 //! ```
 
@@ -140,14 +157,20 @@ impl<T> Borrow<T> for Id<T> {
     }
 }
 
+/// `make_allocator!(Type, NAME, Allocator)`
+///
+/// Performs the following steps:
+/// - Create a static reference to an `Allocator<Type>` accessible by `NAME`.
+/// - Lazily initialise (via `lazy_static`) to `Allocator::default()`.
+/// - Implements `Allocated` for `Type` by using this allocator.
 #[macro_export]
 macro_rules! make_allocator {
     ($type:ty, $name:ident, $alloc:ident) => {
-        lazy_static! {
+        lazy_static::lazy_static! {
             static ref $name: $alloc<$type> = $alloc::default();
         }
 
-        impl Allocated for $type {
+        impl $crate::Allocated for $type {
             type Alloc = $alloc<$type>;
             fn allocator() -> &'static Self::Alloc {
                 &$name
