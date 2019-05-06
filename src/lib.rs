@@ -90,6 +90,20 @@ impl<T> Id<T> {
     pub fn id(p: &Self) -> usize {
         &*p.0 as *const T as usize
     }
+
+    /// Consumes the `Id` and produces a raw pointer.
+    /// Must be converted back with `from_raw` to avoid a leak.
+    #[allow(clippy::wrong_self_convention)]
+    pub unsafe fn into_raw(p: Self) -> *const T {
+        Arc::into_raw(p.0)
+    }
+
+    /// Must have previously been produced by `Id::into_raw`.
+    pub unsafe fn from_id(id: usize) -> Id<T> {
+        let ptr = id as *const T;
+        let arc = Arc::from_raw(ptr);
+        Id(arc)
+    }
 }
 
 impl<T: Allocated> Id<T> {
